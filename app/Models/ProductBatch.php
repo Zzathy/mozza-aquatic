@@ -12,7 +12,25 @@ class ProductBatch extends Model
     /** @use HasFactory<\Database\Factories\ProductBatchFactory> */
     use HasFactory;
 
-    protected $fillable = ['product_id', 'stock_entry_id',  'batch_number', 'initial_qty', 'remaining_qty', 'buy_price', 'expired_date'];
+    protected $fillable = [
+        'stock_entry_id', 
+        'product_id', 
+        'batch_number', 
+        'initial_qty', 
+        'remaining_qty', 
+        'buy_price', 
+        'expired_date'
+    ];
+
+    protected static function booted()
+    {
+        // Gak usah main hidden field di Filament, langsung copy di level model pas mau save!
+        static::saving(function ($batch) {
+            if (empty($batch->id)) {
+                $batch->remaining_qty = $batch->initial_qty;
+            }
+        });
+    }
 
     public function product(): BelongsTo
     {
