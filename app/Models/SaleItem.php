@@ -30,20 +30,12 @@ class SaleItem extends Model
 
     protected static function booted()
     {
+        // TRIK SAKTI: Hitung subtotal otomatis sebelum masuk ke MySQL
         static::creating(function ($item) {
-            $batch = ProductBatch::where('product_id', $item->product_id)
-                ->where('remaining_qty', '>', 0)
-                ->orderBy('created_at', 'asc')
-                ->first();
-
-            if ($batch) {
-                $item->product_batch_id = $batch->id;
-                $item->cost_price = $batch->buy_price;
-                
-                $batch->decrement('remaining_qty', $item->qty);
-            }
+            $item->subtotal = (int)$item->qty * (float)$item->unit_price;
         });
 
+        // Jika item penjualan dihapus, kembalikan qty-nya ke batch asalnya
         static::deleted(function ($item) {
             if ($item->product_batch_id) {
                 $item->productBatch()->increment('remaining_qty', $item->qty);

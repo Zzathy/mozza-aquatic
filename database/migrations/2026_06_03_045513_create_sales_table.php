@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
             $table->string('invoice_number')->unique();
-            $table->string('type')->default('daily');
             $table->string('customer_name')->nullable();
             $table->string('customer_phone')->nullable();
             $table->text('customer_address')->nullable();
@@ -22,8 +21,8 @@ return new class extends Migration
             $table->decimal('discount', 15, 2)->default(0);
             $table->decimal('final_amount', 15, 2)->default(0);
             $table->string('payment_status')->default('Lunas');
-            $table->decimal('received_amount', 15, 2)->default(0); 
-            $table->decimal('balance_due', 15, 2)->default(0);     
+            $table->decimal('paid_amount', 15, 2)->default(0);  
+            $table->decimal('due_amount', 15, 2)->default(0);
             $table->text('notes')->nullable();
             $table->timestamps();
         });
