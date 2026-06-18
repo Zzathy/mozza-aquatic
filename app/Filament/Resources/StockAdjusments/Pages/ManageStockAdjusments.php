@@ -27,7 +27,6 @@ class ManageStockAdjusments extends ManageRecords
                 })
                 ->after(function ($record, array $data) {
                     \Illuminate\Support\Facades\DB::transaction(function () use ($record, $data) {
-                        // 1. Masukkan data ke sale_items
                         $item = $record->saleItems()->create([
                             'product_id' => $data['product_id'],
                             'qty' => $data['qty'],
@@ -35,45 +34,54 @@ class ManageStockAdjusments extends ManageRecords
                             'subtotal' => 0,   
                         ]);
 
-                        // 2. AMBIL ANTREAN FIFO DAN HITUNG MODAL SECARA LIVE
-                        $qtyDibutuhkan = $data['qty'];
+                        // Muat data produk dan kategorinya untuk pengecekan
+                        $product = \App\Models\Product::with('category')->find($data['product_id']);
+                        $namaKategori = optional($product->category)->name;
+
                         $totalKerugian = 0;
 
-                        // Ambil batch tertua (FIFO)
-                        $batches = \App\Models\ProductBatch::where('product_id', $data['product_id'])
-                            ->where('remaining_qty', '>', 0)
-                            ->orderBy('created_at', 'asc')
-                            ->get();
+                        // 🚀 BYPASS JASA: Kalau kasir gak sengaja masukin kategori Jasa ke Adjustment
+                        if (stripos($namaKategori, 'Jasa') !== false || stripos($namaKategori, 'Service') !== false) {
+                            $item->updateQuietly([
+                                'product_batch_id' => null,
+                                'cost_price' => 0,
+                            ]);
+                        } else {
+                            // --- LOGIC FIFO PENYUSUTAN STOK FISIK ASLIMU ---
+                            $qtyDibutuhkan = $data['qty'];
+                            $batches = \App\Models\ProductBatch::where('product_id', $data['product_id'])
+                                ->where('remaining_qty', '>', 0)
+                                ->orderBy('created_at', 'asc')
+                                ->get();
 
-                        foreach ($batches as $batch) {
-                            if ($qtyDibutuhkan <= 0) break;
+                            foreach ($batches as $batch) {
+                                if ($qtyDibutuhkan <= 0) break;
 
-                            if ($batch->remaining_qty >= $qtyDibutuhkan) {
-                                $batch->decrement('remaining_qty', $qtyDibutuhkan);
-                                $totalKerugian += $qtyDibutuhkan * (float)$batch->buy_price;
-                                
-                                $item->updateQuietly([
-                                    'product_batch_id' => $batch->id,
-                                    'cost_price' => $batch->buy_price,
-                                ]);
-                                $qtyDibutuhkan = 0;
-                            } else {
-                                $qtyDibutuhkan -= $batch->remaining_qty;
-                                $totalKerugian += $batch->remaining_qty * (float)$batch->buy_price;
-                                
-                                $item->updateQuietly([
-                                    'product_batch_id' => $batch->id,
-                                    'cost_price' => $batch->buy_price,
-                                ]);
-                                $batch->update(['remaining_qty' => 0]);
+                                if ($batch->remaining_qty >= $qtyDibutuhkan) {
+                                    $batch->decrement('remaining_qty', $qtyDibutuhkan);
+                                    $totalKerugian += $qtyDibutuhkan * (float)$batch->buy_price;
+                                    $item->updateQuietly([
+                                        'product_batch_id' => $batch->id,
+                                        'cost_price' => $batch->buy_price,
+                                    ]);
+                                    $qtyDibutuhkan = 0;
+                                } else {
+                                    $qtyDibutuhkan -= $batch->remaining_qty;
+                                    $totalKerugian += $batch->remaining_qty * (float)$batch->buy_price;
+                                    $item->updateQuietly([
+                                        'product_batch_id' => $batch->id,
+                                        'cost_price' => $batch->buy_price,
+                                    ]);
+                                    $batch->update(['remaining_qty' => 0]);
+                                }
+                            }
+
+                            if ($qtyDibutuhkan > 0) {
+                                throw new \Exception("Gagal mencatat! Jumlah penyesuaian melebihi total stok yang tersedia di gudang.");
                             }
                         }
 
-                        if ($qtyDibutuhkan > 0) {
-                            throw new \Exception("Gagal mencatat! Jumlah penyesuaian melebihi total stok yang tersedia di gudang.");
-                        }
-
-                        // 3. UPDATE DATA INDUK & TEMBAK CASHFLOW KERUGIAN
+                        // 3. UPDATE DATA INDUK & TEMBAK CASHFLOW KERUGIAN (Tetap jalan untuk produk fisik)
                         $record->updateQuietly([
                             'final_amount' => $totalKerugian
                         ]);

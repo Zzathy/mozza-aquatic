@@ -105,13 +105,22 @@ class Sale extends Model
     protected static function prosesFifoPenjualan($sale)
     {
         DB::transaction(function () use ($sale) {
-            // Muat ulang relasi items terbaru agar datanya fresh jika dipicu dari aksi edit
-            $sale->load('saleItems');
+            $sale->load('saleItems.product.category'); // Muat sampai relasi kategori
 
             foreach ($sale->saleItems as $item) {
+                // 🚀 TRICK SAKTI BYPASS JASA: Cek apakah nama kategori mengandung kata 'Jasa' atau 'Service'
+                $namaKategori = optional($item->product->category)->name;
+                if (stripos($namaKategori, 'Jasa') !== false || stripos($namaKategori, 'Service') !== false) {
+                    $item->updateQuietly([
+                        'product_batch_id' => null, // Jasa tidak punya batch fisik
+                        'cost_price' => 0,          // Modal Rp 0 (Murni Tenaga)
+                    ]);
+                    continue; // Skip, langsung lanjut ke item produk berikutnya!
+                }
+
+                // --- SISANYA ADALAH LOGIC FIFO ASLIMU YANG BADAK ---
                 $qtyDibutuhkan = $item->qty;
 
-                // Ambil antrean batch paling tua (FIFO)
                 $batches = ProductBatch::where('product_id', $item->product_id)
                     ->where('remaining_qty', '>', 0)
                     ->orderBy('created_at', 'asc')
@@ -122,21 +131,17 @@ class Sale extends Model
 
                     if ($batch->remaining_qty >= $qtyDibutuhkan) {
                         $batch->decrement('remaining_qty', $qtyDibutuhkan);
-                        
                         $item->updateQuietly([
                             'product_batch_id' => $batch->id,
                             'cost_price' => $batch->buy_price,
                         ]);
-                        
                         $qtyDibutuhkan = 0;
                     } else {
                         $qtyDibutuhkan -= $batch->remaining_qty;
-                        
                         $item->updateQuietly([
                             'product_batch_id' => $batch->id,
                             'cost_price' => $batch->buy_price,
                         ]);
-
                         $batch->update(['remaining_qty' => 0]);
                     }
                 }
