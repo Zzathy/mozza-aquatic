@@ -52,21 +52,45 @@ class Sale extends Model
             self::prosesFifoPenjualan($sale);
         });
 
-        // 3. INTEGRASI ARUS KAS (Kodingan aslimu)
+        // INTEGRASI ARUS KAS PINTAR (MENDUKUNG PENJUALAN VS KEMATIAN BARANG)
         static::saved(function ($sale) {
-            if ($sale->paid_amount > 0) {
-                $sale->cashFlows()->updateOrCreate(
-                    ['reference_id' => $sale->id, 'reference_type' => get_class($sale)],
-                    [
-                        'type' => 'Income',
-                        'category' => 'Sales',
-                        'amount' => $sale->paid_amount,
-                        'transaction_date' => $sale->created_at,
-                        'description' => "Pendapatan dari invoice: {$sale->invoice_number}",
-                    ]
-                );
-            } else {
-                $sale->cashFlows()->delete();
+            // JIKA INI DATA IKAN MATI / BARANG RUSAK
+            if (str_starts_with($sale->customer_name, 'SYSTEM_LOSS_')) {
+                // Hitung total kerugian asli dari akumulasi harga modal beli batch FIFO
+                $totalKerugianModal = $sale->saleItems->sum(fn($item) => $item->qty * $item->cost_price);
+                
+                if ($totalKerugianModal > 0) {
+                    $sale->cashFlows()->updateOrCreate(
+                        ['reference_id' => $sale->id, 'reference_type' => get_class($sale)],
+                        [
+                            'type' => 'Expense',
+                            'category' => 'Inventory Loss', // Dicatat murni sebagai kerugian aset toko
+                            'amount' => $totalKerugianModal,
+                            'transaction_date' => $sale->created_at,
+                            'description' => "Kerugian otomatis dari pencatatan: {$sale->customer_name}",
+                        ]
+                    );
+                    
+                    // Update juga nilai final_amount di tabel sales untuk keperluan report laba rugi besok
+                    $sale->quietlyUpdate(['final_amount' => $totalKerugianModal]);
+                }
+            } 
+            // JIKA INI TRANSAKSI KASIR JUALAN NORMAL SEPERTI BIASA
+            else {
+                if ($sale->paid_amount > 0) {
+                    $sale->cashFlows()->updateOrCreate(
+                        ['reference_id' => $sale->id, 'reference_type' => get_class($sale)],
+                        [
+                            'type' => 'Income',
+                            'category' => 'Sales',
+                            'amount' => $sale->paid_amount,
+                            'transaction_date' => $sale->created_at,
+                            'description' => "Pendapatan dari invoice: {$sale->invoice_number}",
+                        ]
+                    );
+                } else {
+                    $sale->cashFlows()->delete();
+                }
             }
         });
 

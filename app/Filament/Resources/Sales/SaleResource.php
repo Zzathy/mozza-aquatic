@@ -13,12 +13,20 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class SaleResource extends Resource
 {
     protected static ?string $model = Sale::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->where('customer_name', 'not like', 'SYSTEM_LOSS_%')
+            ->orWhereNull('customer_name'); // Jaga-jaga kalau kasir gak ngisi nama pembeli
+    }
 
     public static function form(Schema $schema): Schema
     {
