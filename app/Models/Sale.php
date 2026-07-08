@@ -15,7 +15,7 @@ class Sale extends Model
 
     protected $fillable = [
         'invoice_number', 'customer_name', 'customer_phone', 'customer_address',
-        'total_amount', 'discount', 'final_amount', 'payment_status', 'paid_amount', 'due_amount', 'notes'
+        'total_amount', 'discount', 'final_amount', 'payment_status', 'paid_amount', 'due_amount', 'notes', 'created_at'
     ];
 
     public function saleItems(): HasMany

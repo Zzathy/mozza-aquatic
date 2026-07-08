@@ -3,13 +3,14 @@
 namespace App\Filament\Resources\Sales\Schemas;
 
 use App\Models\Product;
-use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Str;
 
 class SaleForm
 {
@@ -21,10 +22,17 @@ class SaleForm
                 // SECTION 1: HEADER NOTA PENJUALAN (Bersih dari Type)
                 Section::make('Header Transaksi Kasir')
                     ->components([
-                        TextInput::make('invoice_number')
-                            ->label('No. Invoice')
-                            ->required()
-                            ->default('INV-' . date('Ymd-Hi') . '-' . rand(100, 999)),
+                        TextInput::make('invoice')
+                            ->label('Nomor Nota / Invoice')
+                            ->default(fn () => 'MZ-' . strtoupper(Str::random(6))) // Otomatis bikin MZ-H4B9K1
+                            ->readOnly() // Dikunci biar gak diganggu gugat
+                            ->dehydrated() // Wajib ada! Biar form yang di-readonly tetep disimpen ke database
+                            ->unique(ignoreRecord: true)
+                            ->required(),
+                        DateTimePicker::make('created_at')
+                            ->label('Tanggal & Waktu Transaksi')
+                            ->default(now()) // Otomatis keisi jam sekarang kalau gak diubah
+                            ->required(),
                         TextInput::make('customer_name')
                             ->label('Nama Pelanggan')
                             ->default('Umum / Cash'),
@@ -33,7 +41,7 @@ class SaleForm
                         Textarea::make('customer_address')
                             ->label('Alamat Pelanggan')
                             ->rows(2)->columnSpanFull(),
-                    ])->columns(3), // Diubah jadi 3 kolom karena type sudah dihapus
+                    ])->columns(2), // Diubah jadi 3 kolom karena type sudah dihapus
 
                 // SECTION 2: REPEATER BELANJAAN (Bersih & Fokus Otomatisasi Harga)
                 Section::make('Daftar Belanjaan Pelanggan')
