@@ -2,8 +2,6 @@
 
 namespace App\Filament\Resources\Sales;
 
-use App\Filament\Resources\Sales\Pages\CreateSale;
-use App\Filament\Resources\Sales\Pages\EditSale;
 use App\Filament\Resources\Sales\Pages\ListSales;
 use App\Filament\Resources\Sales\Schemas\SaleForm;
 use App\Filament\Resources\Sales\Tables\SalesTable;
@@ -25,7 +23,7 @@ class SaleResource extends Resource
     {
         return parent::getEloquentQuery()
             ->where('customer_name', 'not like', 'SYSTEM_LOSS_%')
-            ->orWhereNull('customer_name'); // Jaga-jaga kalau kasir gak ngisi nama pembeli
+            ->orWhereNull('customer_name');
     }
 
     public static function form(Schema $schema): Schema
@@ -49,8 +47,6 @@ class SaleResource extends Resource
     {
         return [
             'index' => ListSales::route('/'),
-            'create' => CreateSale::route('/create'),
-            'edit' => EditSale::route('/{record}/edit'),
         ];
     }
 }
