@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\StockEntries\Tables;
 
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
@@ -55,6 +56,9 @@ class StockEntriesTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
+            ])->actions([
+                EditAction::make(),
+                DeleteAction::make(),
             ]);
     }
 }

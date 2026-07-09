@@ -2,8 +2,6 @@
 
 namespace App\Filament\Resources\StockEntries;
 
-use App\Filament\Resources\StockEntries\Pages\CreateStockEntry;
-use App\Filament\Resources\StockEntries\Pages\EditStockEntry;
 use App\Filament\Resources\StockEntries\Pages\ListStockEntries;
 use App\Filament\Resources\StockEntries\Schemas\StockEntryForm;
 use App\Filament\Resources\StockEntries\Tables\StockEntriesTable;
@@ -41,8 +39,6 @@ class StockEntryResource extends Resource
     {
         return [
             'index' => ListStockEntries::route('/'),
-            'create' => CreateStockEntry::route('/create'),
-            'edit' => EditStockEntry::route('/{record}/edit'),
         ];
     }
 }

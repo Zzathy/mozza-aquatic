@@ -2,8 +2,6 @@
 
 namespace App\Filament\Resources\CashFlows;
 
-use App\Filament\Resources\CashFlows\Pages\CreateCashFlow;
-use App\Filament\Resources\CashFlows\Pages\EditCashFlow;
 use App\Filament\Resources\CashFlows\Pages\ListCashFlows;
 use App\Filament\Resources\CashFlows\Schemas\CashFlowForm;
 use App\Filament\Resources\CashFlows\Tables\CashFlowsTable;
@@ -49,8 +47,6 @@ class CashFlowResource extends Resource
     {
         return [
             'index' => ListCashFlows::route('/'),
-            'create' => CreateCashFlow::route('/create'),
-            'edit' => EditCashFlow::route('/{record}/edit'),
         ];
     }
 }
